@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { fetchUsers } from "@/lib/data";
-import { USER_LABEL_TEXT, type UserLabel } from "@/lib/types";
+import { USER_LABEL_TEXT, userDisplayName, type UserLabel } from "@/lib/types";
 import { Pagination } from "@/components/Pagination";
 import { UserLabelBadges } from "@/components/UserLabelBadges";
-import { formatDateTime, formatRelative } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { toQuery } from "@/lib/query";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export default async function UsersPage({
             type="text"
             name="search"
             defaultValue={search ?? ""}
-            placeholder="名前・ID・LINE・Discordで検索"
+            placeholder="名前・メール・Instagramで検索"
             className="w-64 rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm dark:border-white/10 dark:bg-neutral-900"
           />
           <button
@@ -79,9 +79,9 @@ export default async function UsersPage({
           <thead>
             <tr className="border-b border-black/10 text-left text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400">
               <th className="px-4 py-3 font-medium">名前</th>
-              <th className="px-4 py-3 font-medium">主な連携</th>
-              <th className="px-4 py-3 font-medium">参加日</th>
-              <th className="px-4 py-3 font-medium">最終アクティブ</th>
+              <th className="px-4 py-3 font-medium">ラベル</th>
+              <th className="px-4 py-3 font-medium">地域</th>
+              <th className="px-4 py-3 font-medium">登録日</th>
               <th className="px-4 py-3 font-medium">依頼数</th>
             </tr>
           </thead>
@@ -93,16 +93,16 @@ export default async function UsersPage({
                     href={`/users/${user.id}`}
                     className="font-medium text-neutral-900 hover:text-indigo-600 dark:text-neutral-100 dark:hover:text-indigo-400"
                   >
-                    {user.display_name ?? user.id}
+                    {userDisplayName(user)}
                   </Link>
-                  <p className="text-xs text-neutral-400">{user.id}</p>
+                  <p className="text-xs text-neutral-400">{user.email ?? user.instagram ?? user.id.slice(0, 8)}</p>
                 </td>
                 <td className="px-4 py-3">
-                  <UserLabelBadges labels={user.labels} />
+                  <UserLabelBadges labels={user.user_labels} />
                 </td>
-                <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">{formatDateTime(user.created_at)}</td>
+                <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">{user.region ?? "-"}</td>
                 <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">
-                  {formatRelative(user.last_active_at)}
+                  {formatDateTime(user.registered_at)}
                 </td>
                 <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{user.requestCount}</td>
               </tr>
@@ -123,7 +123,7 @@ export default async function UsersPage({
         pageSize={pageSize}
         total={total}
         basePath="/users"
-        searchParams={{ ...labelQuery, ...searchQuery }}
+        searchParams={{ ...toQuery(labelQuery), ...toQuery(searchQuery) }}
       />
     </div>
   );

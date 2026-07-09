@@ -15,11 +15,12 @@ Letter. の API（`api/yolo-admin.js`）には依存せず yolo-platform Supabas
 - `npm run build` … ビルド＋型チェック（変更後は必ず通すこと。ESLint は未導入）
 - env は `.env.local.example` を参照（ビルドは env 無しでも通る）
 
-## 重要な前提（README.md も参照）
-- `supabase/schema.sql` は実スキーマ未確認のまま画面仕様から逆算した想定スキーマ。yolo-platform の
-  実テーブルが判明したら最優先でこのファイルと `lib/types.ts` / `lib/data.ts` を合わせること
-- Letter. 側の旧実装（`yolo-admin.html` 等）は参照できないまま実装したため、ロジックの細部は
-  未検証。差異に気づいたら README.md に追記する
+## 重要な前提（README.md / docs/ARCHITECTURE.md も参照）
+- `supabase/schema.sql` は yolo-platform 本番の実スキーマ・スナップショット（2026-07-09 確認済み）
+- ステータス語彙はテーブルごとに異なる。必ず `lib/types.ts` の `normalizeStatus` / `STATUS_WRITE_VALUE`
+  を経由し、生のステータス文字列を直接比較・書き込みしない
+- `letter_bookings` の依頼内容・followups・admin_memo は `booking_data`（jsonb）内。キー名は
+  Letter. 側実装依存のため、実データ確認時に `bookingTitle` 等の調整が必要になり得る
 
 ## ルール
 - `SUPABASE_SERVICE_ROLE_KEY` を使う処理はサーバー専用に保つ（`getServiceClient` の制約を崩さない。

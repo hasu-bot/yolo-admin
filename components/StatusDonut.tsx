@@ -1,14 +1,14 @@
-import { REQUEST_STATUS_LABEL, REQUEST_STATUSES, type RequestStatus } from "@/lib/types";
+import { CANONICAL_STATUSES, STATUS_LABEL, type CanonicalStatus } from "@/lib/types";
 
-const STATUS_COLOR: Record<RequestStatus, string> = {
+const STATUS_COLOR: Record<CanonicalStatus, string> = {
   new: "#d03b3b",
   in_progress: "#fab219",
   completed: "#0ca30c",
   cancelled: "#9a9890",
 };
 
-export function StatusDonut({ counts }: { counts: Record<RequestStatus, number> }) {
-  const total = REQUEST_STATUSES.reduce((sum, s) => sum + counts[s], 0);
+export function StatusDonut({ counts }: { counts: Record<CanonicalStatus, number> }) {
+  const total = CANONICAL_STATUSES.reduce((sum, s) => sum + counts[s], 0);
   const size = 176;
   const strokeWidth = 24;
   const radius = (size - strokeWidth) / 2;
@@ -16,7 +16,7 @@ export function StatusDonut({ counts }: { counts: Record<RequestStatus, number> 
   const gap = total > 0 ? 3 : 0;
 
   let offset = 0;
-  const segments = REQUEST_STATUSES.filter((s) => counts[s] > 0).map((status) => {
+  const segments = CANONICAL_STATUSES.filter((s) => counts[s] > 0).map((status) => {
     const value = counts[status];
     const length = (value / total) * circumference;
     const dash = Math.max(length - gap, 0);
@@ -61,13 +61,13 @@ export function StatusDonut({ counts }: { counts: Record<RequestStatus, number> 
         </div>
       </div>
       <ul className="space-y-2 text-sm">
-        {REQUEST_STATUSES.map((status) => {
+        {CANONICAL_STATUSES.map((status) => {
           const value = counts[status];
           const pct = total > 0 ? Math.round((value / total) * 100) : 0;
           return (
             <li key={status} className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: STATUS_COLOR[status] }} />
-              <span className="text-neutral-700 dark:text-neutral-300">{REQUEST_STATUS_LABEL[status]}</span>
+              <span className="text-neutral-700 dark:text-neutral-300">{STATUS_LABEL[status]}</span>
               <span className="text-neutral-500 dark:text-neutral-400">
                 {value}（{pct}%）
               </span>

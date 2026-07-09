@@ -8,19 +8,17 @@ Next.js アプリとして切り出したもの。yolo-platform Supabase Project
 - DB: Supabase（`lib/supabase-server.ts`: service role キーによるサーバー専用クライアント）
 - 認証: Basic認証（`proxy.ts`。Next.js 16 で `middleware` は `proxy` に名称変更されている）
 
-## 重要な前提（要確認）
-このリポジトリは既存の `letter-camera-consultation`（Letter. 側の実装）を直接参照せず、依頼プロンプトの
-仕様書とスクリーンショットのみから新規実装した。以下は未確認のまま進めた点:
-
-- **Supabase スキーマは実在しない想定スキーマ**: `users` / `user_identities` / `letter_bookings` などの
-  8テーブルは、既存の8リポジトリのどこにも定義が見つからなかった。`supabase/schema.sql` は画面仕様から
-  逆算した想定スキーマ。yolo-platform 側の実テーブルが確定したら、このファイルと `lib/types.ts` /
-  `lib/data.ts` のカラム名を実スキーマに合わせて調整すること
-- **Letter. 側の実装は未参照**: 移植元とされていた `yolo-admin.html` / `admin.html` 等はこのセッションから
-  読めなかったため、画面仕様のみから再実装した。細かいロジック（ステータス遷移の制約など）は
-  Letter. 側の実装と食い違う可能性がある
-- **依頼ID表記**: スクリーンショットの `REQ-2025-050` のような採番は行っていない（採番テーブルが無いため）。
-  実データの `id`（uuid想定）をそのまま使用している
+## 重要な前提
+- **スキーマは実DBから確認済み（2026-07-09）**: `supabase/schema.sql` は yolo-platform 本番の
+  information_schema ダンプから採取した実スキーマのスナップショット。全体設計と構築手順は
+  `docs/ARCHITECTURE.md` を参照
+- **ステータス語彙はテーブルごとに異なる**: `letter_bookings` は requested/…、`consultations` は
+  pending/in_progress/done。yolo-admin は読み取り時に正準化（未対応/対応中/完了/キャンセル）し、
+  書き込み時に各アプリの語彙へ変換する（`lib/types.ts`）
+- **Letter. 側の実装は未参照**: `yolo-admin.html` / `admin.html` 等はこのセッションから読めなかったため、
+  画面仕様と実DBスキーマから実装した。`booking_data`（jsonb）の中のキー名は Letter. 側の実装に
+  依存するため、実データで表示を確認して `lib/types.ts` の `bookingTitle` / 詳細画面のキーラベルを調整すること
+- **依頼ID表記**: `REQ-2025-050` のような採番は行わず、実データの uuid を使用している
 
 ## コマンド
 - `npm run dev` … 開発サーバー

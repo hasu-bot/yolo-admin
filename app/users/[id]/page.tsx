@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchUserDetail } from "@/lib/data";
-import { REQUEST_KIND_LABEL } from "@/lib/types";
+import { REQUEST_KIND_LABEL, userDisplayName } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UserLabelBadges } from "@/components/UserLabelBadges";
 import { formatDateTime, formatRelative } from "@/lib/format";
@@ -32,21 +32,44 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
       <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
         <div className="space-y-4">
           <div className="rounded-xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
-            <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-              {user.display_name ?? "名前未設定"}
-            </h1>
+            <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">{userDisplayName(user)}</h1>
+            {user.full_name && user.nickname && <p className="text-sm text-neutral-500">{user.full_name}</p>}
             <p className="text-xs text-neutral-400">{user.id}</p>
             <div className="mt-3">
-              <UserLabelBadges labels={user.labels} />
+              <UserLabelBadges labels={user.user_labels} />
             </div>
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-neutral-400">参加日</dt>
-                <dd className="text-neutral-800 dark:text-neutral-200">{formatDateTime(user.created_at)}</dd>
+                <dt className="text-neutral-400">登録日</dt>
+                <dd className="text-neutral-800 dark:text-neutral-200">{formatDateTime(user.registered_at)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-neutral-400">最終アクティブ</dt>
-                <dd className="text-neutral-800 dark:text-neutral-200">{formatRelative(user.last_active_at)}</dd>
+                <dt className="text-neutral-400">最終更新</dt>
+                <dd className="text-neutral-800 dark:text-neutral-200">{formatRelative(user.updated_at)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-neutral-400">メール</dt>
+                <dd className="text-neutral-800 dark:text-neutral-200">{user.email ?? "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-neutral-400">電話</dt>
+                <dd className="text-neutral-800 dark:text-neutral-200">{user.phone ?? "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-neutral-400">Instagram</dt>
+                <dd className="text-neutral-800 dark:text-neutral-200">{user.instagram ?? "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-neutral-400">世代 / 地域</dt>
+                <dd className="text-neutral-800 dark:text-neutral-200">
+                  {user.generation ?? "-"} / {user.region ?? "-"}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-neutral-400">興味</dt>
+                <dd className="text-right text-neutral-800 dark:text-neutral-200">
+                  {user.interests.length > 0 ? user.interests.join("・") : "-"}
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-neutral-400">依頼数</dt>
@@ -68,7 +91,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                         {PROVIDER_LABEL[identity.provider] ?? identity.provider}
                       </p>
                       <p className="text-xs text-neutral-400">
-                        {identity.display_name ?? identity.external_id}
+                        {identity.display_name ?? identity.provider_user_id}
                       </p>
                     </div>
                     <span className="text-xs text-neutral-400">{formatRelative(identity.linked_at)}</span>
@@ -99,7 +122,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                         {REQUEST_KIND_LABEL[req.kind]} ・ {formatDateTime(req.created_at)}
                       </p>
                     </div>
-                    <StatusBadge status={req.status} />
+                    <StatusBadge status={req.status} rawStatus={req.rawStatus} />
                   </li>
                 ))}
               </ul>
@@ -114,8 +137,13 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               <ul className="space-y-3 text-sm">
                 {logs.map((log) => (
                   <li key={log.id}>
-                    <p className="text-neutral-800 dark:text-neutral-200">{log.action}</p>
-                    <p className="text-xs text-neutral-400">{formatDateTime(log.created_at)}</p>
+                    <p className="text-neutral-800 dark:text-neutral-200">
+                      {log.activity_type}
+                      {log.provider && (
+                        <span className="ml-2 text-xs text-neutral-400">via {log.provider}</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-neutral-400">{formatDateTime(log.occurred_at)}</p>
                   </li>
                 ))}
               </ul>

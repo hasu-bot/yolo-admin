@@ -1,6 +1,6 @@
-import { REQUEST_STATUS_LABEL, type RequestStatus } from "@/lib/types";
+import { STATUS_LABEL, type CanonicalStatus } from "@/lib/types";
 
-const STATUS_STYLE: Record<RequestStatus, { dot: string; bg: string; text: string }> = {
+const STATUS_STYLE: Record<CanonicalStatus, { dot: string; bg: string; text: string }> = {
   new: { dot: "bg-[#d03b3b]", bg: "bg-red-50 dark:bg-red-500/10", text: "text-red-700 dark:text-red-300" },
   in_progress: {
     dot: "bg-[#fab219]",
@@ -19,14 +19,22 @@ const STATUS_STYLE: Record<RequestStatus, { dot: string; bg: string; text: strin
   },
 };
 
-export function StatusBadge({ status }: { status: RequestStatus }) {
+/** status が正準化できない未知の値のときは rawStatus を灰色で表示する */
+export function StatusBadge({ status, rawStatus }: { status: CanonicalStatus | null; rawStatus?: string }) {
+  if (!status) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-500 dark:bg-white/5 dark:text-neutral-400">
+        {rawStatus ?? "不明"}
+      </span>
+    );
+  }
   const style = STATUS_STYLE[status];
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${style.bg} ${style.text}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-      {REQUEST_STATUS_LABEL[status]}
+      {STATUS_LABEL[status]}
     </span>
   );
 }

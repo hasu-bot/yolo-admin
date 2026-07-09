@@ -2,29 +2,31 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { REQUEST_STATUSES, REQUEST_STATUS_LABEL, type RequestKind, type RequestStatus } from "@/lib/types";
+import { CANONICAL_STATUSES, STATUS_LABEL, type CanonicalStatus, type RequestKind } from "@/lib/types";
 
 export function RequestStatusForm({
   id,
   kind,
   status,
+  rawStatus,
   adminMemo,
   showMemo = false,
 }: {
   id: string;
   kind: RequestKind;
-  status: RequestStatus;
+  status: CanonicalStatus | null;
+  rawStatus?: string;
   adminMemo?: string | null;
   showMemo?: boolean;
 }) {
   const router = useRouter();
-  const [currentStatus, setCurrentStatus] = useState(status);
+  const [currentStatus, setCurrentStatus] = useState<CanonicalStatus | "">(status ?? "");
   const [memo, setMemo] = useState(adminMemo ?? "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  async function submitPatch(patch: { status?: RequestStatus; admin_memo?: string }) {
+  async function submitPatch(patch: { status?: CanonicalStatus; admin_memo?: string }) {
     setError(null);
     setSaved(false);
     const res = await fetch(`/api/requests/${id}`, {
@@ -47,16 +49,18 @@ export function RequestStatusForm({
         <select
           value={currentStatus}
           onChange={(e) => {
-            const next = e.target.value as RequestStatus;
+            const next = e.target.value as CanonicalStatus;
+            if (!next) return;
             setCurrentStatus(next);
             submitPatch({ status: next });
           }}
           disabled={isPending}
           className="rounded-md border border-black/10 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-neutral-900"
         >
-          {REQUEST_STATUSES.map((s) => (
+          {currentStatus === "" && <option value="">{rawStatus ?? "不明"}</option>}
+          {CANONICAL_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {REQUEST_STATUS_LABEL[s]}
+              {STATUS_LABEL[s]}
             </option>
           ))}
         </select>

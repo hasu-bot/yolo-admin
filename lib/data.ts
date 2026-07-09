@@ -1,21 +1,68 @@
 import { getServiceClient } from "./supabase-server";
 import { isToday } from "./format";
-import type {
-  ActivityLog,
-  AppUser,
-  Consultation,
-  DiscordLinkCode,
-  EventRow,
-  LetterBooking,
-  RequestKind,
-  RequestStatus,
-  UnifiedRequest,
-  UserIdentity,
-  UserLabel,
+import {
+  bookingTitle,
+  normalizeStatus,
+  userDisplayName,
+  STATUS_WRITE_VALUE,
+  type ActivityLog,
+  type AppUser,
+  type CanonicalStatus,
+  type Consultation,
+  type DiscordLinkCode,
+  type EventRow,
+  type LetterBooking,
+  type RequestKind,
+  type UnifiedRequest,
+  type UserIdentity,
+  type UserLabel,
 } from "./types";
 
 function sanitizeSearchTerm(term: string): string {
   return term.replace(/[,()%]/g, "").trim().slice(0, 100);
+}
+
+/** users をまとめて引いて id→表示名 のマップを作る */
+async function fetchUserNames(userIds: (string | null)[]): Promise<Map<string, string>> {
+  const ids = [...new Set(userIds.filter((id): id is string => !!id))];
+  const names = new Map<string, string>();
+  if (ids.length === 0) return names;
+  const supabase = getServiceClient();
+  const { data } = await supabase.from("users").select("id, nickname, full_name").in("id", ids);
+  for (const row of (data ?? []) as Pick<AppUser, "id" | "nickname" | "full_name">[]) {
+    names.set(row.id, userDisplayName(row));
+  }
+  return names;
+}
+
+function toUnifiedBooking(row: LetterBooking, names: Map<string, string>): UnifiedRequest {
+  return {
+    id: row.id,
+    kind: "letter_booking",
+    title: bookingTitle(row),
+    requesterName: row.user_id ? (names.get(row.user_id) ?? null) : null,
+    userId: row.user_id,
+    rawStatus: row.status,
+    status: normalizeStatus(row.status),
+    followupCount: row.booking_data?.followups?.length ?? 0,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function toUnifiedConsultation(row: Consultation): UnifiedRequest {
+  return {
+    id: row.id,
+    kind: "consultation",
+    title: row.title,
+    requesterName: row.is_anonymous ? "（匿名）" : (row.nickname ?? null),
+    userId: row.yolo_user_id,
+    rawStatus: row.status,
+    status: normalizeStatus(row.status),
+    followupCount: 0,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
 }
 
 export interface DashboardStats {
@@ -35,16 +82,17 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const [bookings, consultations, users, linkCodes, logs] = await Promise.all([
     supabase.from("letter_bookings").select("status"),
     supabase.from("consultations").select("status"),
-    supabase.from("users").select("id, labels, created_at"),
+    supabase.from("users").select("id, user_labels, created_at"),
     supabase.from("discord_link_codes").select("*").order("created_at", { ascending: false }).limit(5),
-    supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(10),
+    supabase.from("activity_logs").select("*").order("occurred_at", { ascending: false }).limit(10),
   ]);
 
-  const statuses = [...(bookings.data ?? []), ...(consultations.data ?? [])] as { status: RequestStatus }[];
-  const countBy = (status: RequestStatus) => statuses.filter((s) => s.status === status).length;
+  const statuses = [...(bookings.data ?? []), ...(consultations.data ?? [])]
+    .map((row) => normalizeStatus((row as { status: string }).status));
+  const countBy = (status: CanonicalStatus) => statuses.filter((s) => s === status).length;
 
   const todayLineSignups = (users.data ?? []).filter(
-    (u) => Array.isArray(u.labels) && u.labels.includes("line_registered") && isToday(u.created_at)
+    (u) => Array.isArray(u.user_labels) && u.user_labels.includes("line_registered") && isToday(u.created_at)
   ).length;
 
   return {
@@ -60,7 +108,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
 }
 
 export interface RequestsQuery {
-  status?: RequestStatus;
+  status?: CanonicalStatus;
   kind?: RequestKind | "all";
   page?: number;
   pageSize?: number;
@@ -78,67 +126,76 @@ const REQUESTS_FETCH_LIMIT = 300;
 export async function fetchRequests(query: RequestsQuery = {}): Promise<RequestsResult> {
   const { status, kind = "all", page = 1, pageSize = 10 } = query;
   const supabase = getServiceClient();
-  const items: UnifiedRequest[] = [];
 
-  if (kind === "all" || kind === "letter_booking") {
-    let q = supabase
-      .from("letter_bookings")
-      .select("id, user_id, requester_name, title, status, created_at, updated_at, booking_data")
-      .order("created_at", { ascending: false })
-      .limit(REQUESTS_FETCH_LIMIT);
-    if (status) q = q.eq("status", status);
-    const { data } = await q;
-    for (const row of data ?? []) {
-      const { booking_data, ...rest } = row as Omit<UnifiedRequest, "kind"> & {
-        booking_data: LetterBooking["booking_data"];
-      };
-      items.push({ ...rest, kind: "letter_booking", followupCount: booking_data?.followups?.length ?? 0 });
-    }
-  }
+  const [bookings, consultations] = await Promise.all([
+    kind === "all" || kind === "letter_booking"
+      ? supabase.from("letter_bookings").select("*").order("created_at", { ascending: false }).limit(REQUESTS_FETCH_LIMIT)
+      : Promise.resolve({ data: [] }),
+    kind === "all" || kind === "consultation"
+      ? supabase.from("consultations").select("*").order("created_at", { ascending: false }).limit(REQUESTS_FETCH_LIMIT)
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  if (kind === "all" || kind === "consultation") {
-    let q = supabase
-      .from("consultations")
-      .select("id, user_id, requester_name, title, status, created_at, updated_at")
-      .order("created_at", { ascending: false })
-      .limit(REQUESTS_FETCH_LIMIT);
-    if (status) q = q.eq("status", status);
-    const { data } = await q;
-    for (const row of data ?? []) {
-      items.push({ ...(row as Omit<UnifiedRequest, "kind">), kind: "consultation" });
-    }
-  }
+  const bookingRows = (bookings.data ?? []) as LetterBooking[];
+  const names = await fetchUserNames(bookingRows.map((b) => b.user_id));
 
+  let items: UnifiedRequest[] = [
+    ...bookingRows.map((row) => toUnifiedBooking(row, names)),
+    ...((consultations.data ?? []) as Consultation[]).map(toUnifiedConsultation),
+  ];
+
+  // ステータスは語彙ゆれがあるため正準化した上でアプリ側でフィルタする
+  if (status) items = items.filter((item) => item.status === status);
   items.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
   const total = items.length;
   const start = (page - 1) * pageSize;
-  const paged = items.slice(start, start + pageSize);
-
-  return { items: paged, total, page, pageSize };
+  return { items: items.slice(start, start + pageSize), total, page, pageSize };
 }
 
-export type RequestDetail = ({ kind: "letter_booking" } & LetterBooking) | ({ kind: "consultation" } & Consultation);
+export type RequestDetail =
+  | { kind: "letter_booking"; row: LetterBooking; requesterName: string | null }
+  | { kind: "consultation"; row: Consultation; requesterName: string | null };
 
 export async function fetchRequestDetail(kind: RequestKind, id: string): Promise<RequestDetail | null> {
   const supabase = getServiceClient();
-  const table = kind === "letter_booking" ? "letter_bookings" : "consultations";
-  const { data, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
-  if (error || !data) return null;
-  return { ...(data as LetterBooking & Consultation), kind } as RequestDetail;
+  if (kind === "letter_booking") {
+    const { data } = await supabase.from("letter_bookings").select("*").eq("id", id).maybeSingle();
+    if (!data) return null;
+    const row = data as LetterBooking;
+    const names = await fetchUserNames([row.user_id]);
+    return { kind, row, requesterName: row.user_id ? (names.get(row.user_id) ?? null) : null };
+  }
+  const { data } = await supabase.from("consultations").select("*").eq("id", id).maybeSingle();
+  if (!data) return null;
+  const row = data as Consultation;
+  return { kind, row, requesterName: row.is_anonymous ? "（匿名）" : (row.nickname ?? null) };
 }
 
 export async function updateRequest(
   kind: RequestKind,
   id: string,
-  patch: { status?: RequestStatus; admin_memo?: string }
+  patch: { status?: CanonicalStatus; admin_memo?: string }
 ): Promise<boolean> {
   const supabase = getServiceClient();
-  const table = kind === "letter_booking" ? "letter_bookings" : "consultations";
-  const { error } = await supabase
-    .from(table)
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("id", id);
+
+  if (kind === "consultation") {
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (patch.status) update.status = STATUS_WRITE_VALUE.consultation[patch.status];
+    if (patch.admin_memo !== undefined) update.admin_memo = patch.admin_memo;
+    const { error } = await supabase.from("consultations").update(update).eq("id", id);
+    return !error;
+  }
+
+  // letter_bookings に admin_memo カラムは無いため booking_data(jsonb) 内に保持する
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.status) update.status = STATUS_WRITE_VALUE.letter_booking[patch.status];
+  if (patch.admin_memo !== undefined) {
+    const { data } = await supabase.from("letter_bookings").select("booking_data").eq("id", id).maybeSingle();
+    if (!data) return false;
+    update.booking_data = { ...(data.booking_data ?? {}), admin_memo: patch.admin_memo };
+  }
+  const { error } = await supabase.from("letter_bookings").update(update).eq("id", id);
   return !error;
 }
 
@@ -161,10 +218,14 @@ export async function fetchUsers(query: UsersQuery = {}): Promise<UsersResult> {
   const supabase = getServiceClient();
 
   let q = supabase.from("users").select("*", { count: "exact" }).order("created_at", { ascending: false });
-  if (label) q = q.contains("labels", [label]);
+  if (label) q = q.contains("user_labels", [label]);
   if (search) {
     const term = sanitizeSearchTerm(search);
-    if (term) q = q.or(`display_name.ilike.%${term}%,email.ilike.%${term}%,id.eq.${term}`);
+    if (term) {
+      q = q.or(
+        `nickname.ilike.%${term}%,full_name.ilike.%${term}%,email.ilike.%${term}%,instagram.ilike.%${term}%`
+      );
+    }
   }
   const start = (page - 1) * pageSize;
   q = q.range(start, start + pageSize - 1);
@@ -177,12 +238,15 @@ export async function fetchUsers(query: UsersQuery = {}): Promise<UsersResult> {
   if (ids.length > 0) {
     const [bookings, consultations] = await Promise.all([
       supabase.from("letter_bookings").select("user_id").in("user_id", ids),
-      supabase.from("consultations").select("user_id").in("user_id", ids),
+      supabase.from("consultations").select("yolo_user_id").in("yolo_user_id", ids),
     ]);
-    for (const row of [...(bookings.data ?? []), ...(consultations.data ?? [])]) {
+    for (const row of bookings.data ?? []) {
       const uid = (row as { user_id: string | null }).user_id;
-      if (!uid) continue;
-      requestCounts.set(uid, (requestCounts.get(uid) ?? 0) + 1);
+      if (uid) requestCounts.set(uid, (requestCounts.get(uid) ?? 0) + 1);
+    }
+    for (const row of consultations.data ?? []) {
+      const uid = (row as { yolo_user_id: string | null }).yolo_user_id;
+      if (uid) requestCounts.set(uid, (requestCounts.get(uid) ?? 0) + 1);
     }
   }
 
@@ -208,38 +272,53 @@ export async function fetchUserDetail(id: string): Promise<UserDetail | null> {
 
   const [identities, bookings, consultations, logs] = await Promise.all([
     supabase.from("user_identities").select("*").eq("user_id", id).order("linked_at", { ascending: false }),
-    supabase
-      .from("letter_bookings")
-      .select("id, user_id, requester_name, title, status, created_at, updated_at")
-      .eq("user_id", id),
-    supabase
-      .from("consultations")
-      .select("id, user_id, requester_name, title, status, created_at, updated_at")
-      .eq("user_id", id),
-    supabase.from("activity_logs").select("*").eq("user_id", id).order("created_at", { ascending: false }).limit(50),
+    supabase.from("letter_bookings").select("*").eq("user_id", id),
+    supabase.from("consultations").select("*").eq("yolo_user_id", id),
+    supabase.from("activity_logs").select("*").eq("user_id", id).order("occurred_at", { ascending: false }).limit(50),
   ]);
 
+  const appUser = user as AppUser;
+  const names = new Map([[appUser.id, userDisplayName(appUser)]]);
+
   const requests: UnifiedRequest[] = [
-    ...(bookings.data ?? []).map((r) => ({ ...(r as Omit<UnifiedRequest, "kind">), kind: "letter_booking" as const })),
-    ...(consultations.data ?? []).map((r) => ({ ...(r as Omit<UnifiedRequest, "kind">), kind: "consultation" as const })),
+    ...((bookings.data ?? []) as LetterBooking[]).map((row) => toUnifiedBooking(row, names)),
+    ...((consultations.data ?? []) as Consultation[]).map(toUnifiedConsultation),
   ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
   return {
-    user: user as AppUser,
+    user: appUser,
     identities: (identities.data ?? []) as UserIdentity[],
     requests,
     logs: (logs.data ?? []) as ActivityLog[],
   };
 }
 
-export async function fetchEvents(): Promise<EventRow[]> {
+export interface EventWithCount extends EventRow {
+  reservationCount: number;
+}
+
+export async function fetchEvents(): Promise<EventWithCount[]> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("events")
     .select("*")
-    .order("synced_at", { ascending: false, nullsFirst: false })
+    .order("starts_at", { ascending: false, nullsFirst: false })
     .limit(100);
-  return (data ?? []) as EventRow[];
+  const events = (data ?? []) as EventRow[];
+
+  const counts = new Map<string, number>();
+  if (events.length > 0) {
+    const { data: reservations } = await supabase
+      .from("event_reservations")
+      .select("event_id")
+      .in("event_id", events.map((e) => e.id));
+    for (const row of reservations ?? []) {
+      const eid = (row as { event_id: string | null }).event_id;
+      if (eid) counts.set(eid, (counts.get(eid) ?? 0) + 1);
+    }
+  }
+
+  return events.map((e) => ({ ...e, reservationCount: counts.get(e.id) ?? 0 }));
 }
 
 export interface LogsQuery {
@@ -258,10 +337,10 @@ export interface LogsResult {
 export async function fetchActivityLogs(query: LogsQuery = {}): Promise<LogsResult> {
   const { search, page = 1, pageSize = 30 } = query;
   const supabase = getServiceClient();
-  let q = supabase.from("activity_logs").select("*", { count: "exact" }).order("created_at", { ascending: false });
+  let q = supabase.from("activity_logs").select("*", { count: "exact" }).order("occurred_at", { ascending: false });
   if (search) {
     const term = sanitizeSearchTerm(search);
-    if (term) q = q.or(`action.ilike.%${term}%,actor.ilike.%${term}%`);
+    if (term) q = q.or(`activity_type.ilike.%${term}%,provider.ilike.%${term}%`);
   }
   const start = (page - 1) * pageSize;
   q = q.range(start, start + pageSize - 1);

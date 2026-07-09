@@ -42,9 +42,9 @@ export default async function DashboardPage() {
             <ul className="space-y-3">
               {stats.recentLogs.map((log) => (
                 <li key={log.id} className="text-sm">
-                  <p className="text-neutral-800 dark:text-neutral-200">{log.action}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{log.activity_type}</p>
                   <p className="text-xs text-neutral-400">
-                    {log.actor ?? "system"} ・ {formatRelative(log.created_at)}
+                    {log.provider ?? "system"} ・ {formatRelative(log.occurred_at)}
                   </p>
                 </li>
               ))}
@@ -64,8 +64,15 @@ export default async function DashboardPage() {
           <ul className="divide-y divide-black/5 dark:divide-white/10">
             {stats.recentLinkCodes.map((code) => (
               <li key={code.id} className="flex items-center justify-between py-2 text-sm">
-                <span className="font-mono text-neutral-700 dark:text-neutral-300">{code.code}</span>
-                <span className="text-xs text-neutral-400">{formatRelative(code.linked_at ?? code.created_at)}</span>
+                <div>
+                  <span className="font-mono text-neutral-700 dark:text-neutral-300">{code.code}</span>
+                  {code.discord_username && (
+                    <span className="ml-2 text-xs text-neutral-500">{code.discord_username}</span>
+                  )}
+                </div>
+                <span className="text-xs text-neutral-400">
+                  {code.used_at ? `連携済み ・ ${formatRelative(code.used_at)}` : `未使用 ・ ${formatRelative(code.created_at)}`}
+                </span>
               </li>
             ))}
           </ul>

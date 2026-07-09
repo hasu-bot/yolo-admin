@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { fetchRequestDetail, updateRequest } from "@/lib/data";
-import { REQUEST_STATUSES, type RequestKind, type RequestStatus } from "@/lib/types";
+import { CANONICAL_STATUSES, type CanonicalStatus, type RequestKind } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +28,9 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/reques
     return NextResponse.json({ error: "kind は letter_booking か consultation を指定してください" }, { status: 400 });
   }
 
-  const patch: { status?: RequestStatus; admin_memo?: string } = {};
+  const patch: { status?: CanonicalStatus; admin_memo?: string } = {};
   if (body?.status !== undefined) {
-    if (!REQUEST_STATUSES.includes(body.status)) {
+    if (!CANONICAL_STATUSES.includes(body.status)) {
       return NextResponse.json({ error: "不正な status です" }, { status: 400 });
     }
     patch.status = body.status;

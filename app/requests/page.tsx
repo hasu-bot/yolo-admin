@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { fetchRequests } from "@/lib/data";
 import {
+  CANONICAL_STATUSES,
   REQUEST_KIND_LABEL,
-  REQUEST_STATUSES,
-  REQUEST_STATUS_LABEL,
+  STATUS_LABEL,
+  type CanonicalStatus,
   type RequestKind,
-  type RequestStatus,
 } from "@/lib/types";
 import { Pagination } from "@/components/Pagination";
 import { formatDateTime } from "@/lib/format";
@@ -28,8 +28,8 @@ export default async function RequestsPage({
   const params = await searchParams;
   const kind: RequestKind | "all" =
     params.kind === "letter_booking" || params.kind === "consultation" ? params.kind : "all";
-  const status = REQUEST_STATUSES.includes(params.status as RequestStatus)
-    ? (params.status as RequestStatus)
+  const status = CANONICAL_STATUSES.includes(params.status as CanonicalStatus)
+    ? (params.status as CanonicalStatus)
     : undefined;
   const page = Number(params.page ?? "1") || 1;
   const pageSize = 10;
@@ -73,7 +73,7 @@ export default async function RequestsPage({
           >
             すべてのステータス
           </Link>
-          {REQUEST_STATUSES.map((s) => (
+          {CANONICAL_STATUSES.map((s) => (
             <Link
               key={s}
               href={`/requests?${new URLSearchParams(toQuery({ ...kindQuery, status: s })).toString()}`}
@@ -83,7 +83,7 @@ export default async function RequestsPage({
                   : "border border-black/10 text-neutral-600 dark:border-white/10 dark:text-neutral-400"
               }`}
             >
-              {REQUEST_STATUS_LABEL[s]}
+              {STATUS_LABEL[s]}
             </Link>
           ))}
         </div>
@@ -113,9 +113,9 @@ export default async function RequestsPage({
                     {item.title}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{item.requester_name ?? "-"}</td>
+                <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{item.requesterName ?? "-"}</td>
                 <td className="px-4 py-3">
-                  <RequestStatusForm id={item.id} kind={item.kind} status={item.status} />
+                  <RequestStatusForm id={item.id} kind={item.kind} status={item.status} rawStatus={item.rawStatus} />
                 </td>
                 <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">
                   {item.followupCount ? `追加・変更 ${item.followupCount}件` : "-"}
@@ -139,7 +139,7 @@ export default async function RequestsPage({
         pageSize={pageSize}
         total={total}
         basePath="/requests"
-        searchParams={{ ...kindQuery, ...statusQuery }}
+        searchParams={{ ...toQuery(kindQuery), ...toQuery(statusQuery) }}
       />
     </div>
   );

@@ -56,29 +56,29 @@
 
 前提: データはすべてテストのため、破壊的変更可。
 
-### Step 1. 実スキーマの取得 ←今ここ
-yolo-platform の SQL Editor で以下を実行し、結果を共有する：
+### Step 1. 実スキーマの取得 ✅ 完了（2026-07-09）
+information_schema ダンプを取得し、`supabase/schema.sql` を実スキーマのスナップショットとして確定済み。
+判明事項:
+- **必要な全テーブルが yolo-platform に既に存在する**（chats/consultations/messages 含む）→ 本番への DDL 適用は不要
+- yolo-soudan のコードは `yolo_user_id` フォールバック付きで、yolo-platform のスキーマを先取りして書かれていた
+- ステータス語彙はテーブルごとに異なる（`supabase/README.md` 参照）。yolo-admin は正準化して扱う
+- `models` / `reservations`（lumina のテーブル）が同居している → lumina 本番の接続先は要確認（別論点）
+
+### Step 2. yolo-admin の実スキーマ適合 ✅ 完了（2026-07-09）
+`lib/types.ts` / `lib/data.ts` / 全ページを実カラム名に全面適合。ステータスは読み取り時に正準化
+（requested/pending→未対応、done→完了 等）、書き込み時に各アプリの語彙へ変換する方式。
+
+### Step 3. yolo-platform（本番）の残作業
+DDL は不要。storage バケット `attachments`（yolo-soudan の添付用）だけ作成する:
 ```sql
-select table_name, column_name, data_type, is_nullable, column_default
-from information_schema.columns
-where table_schema = 'public'
-order by table_name, ordinal_position;
+insert into storage.buckets (id, name, public)
+values ('attachments', 'attachments', true) on conflict (id) do nothing;
 ```
-→ Letter./LINE Worker が実際に使っているカラム定義が正。yolo-admin の想定スキーマ（`supabase/schema.sql` / `lib/types.ts`）をこれに合わせて修正する。
-
-### Step 2. 正準スキーマの確定
-実スキーマ＋不足分（`user_identities` / `events` / `event_reservations` / `chats` / `messages` / `activity_logs` のうち無いもの）を統合した正準スキーマを
-`supabase/schema.sql` に確定し、不足分の migration を `supabase/migrations/` に作成。
-既知の差異: yolo-soudan は `users.user_labels` を参照（yolo-admin 初期実装は `labels` を想定）→ 実スキーマ側に合わせる。
-
-### Step 3. yolo-platform（本番）へ適用
-SQL Editor で migration を実行。既存テーブルは変更せず、不足テーブルの追加のみ（Letter./LINE Worker を壊さない）。
-storage バケット `attachments`（yolo-soudan の添付用）も作成。
 
 ### Step 4. otazune → yolo-platform-dev
 1. ダッシュボードでプロジェクト名を `yolo-platform-dev` にリネーム（URL・キーは変わらない）
-2. 旧テーブル（chats/consultations/messages）を drop
-3. 正準スキーマをフル適用
+2. SQL Editor で `supabase/dev-setup.sql` を実行（旧テーブル破棄＋バケット作成）
+3. 続けて `supabase/schema.sql` を全文実行（フルスキーマ構築）
 
 ### Step 5. 接続の切り替え
 | アプリ | 変更 |

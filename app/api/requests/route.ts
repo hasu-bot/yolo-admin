@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { fetchRequests } from "@/lib/data";
-import { REQUEST_STATUSES, type RequestKind, type RequestStatus } from "@/lib/types";
+import { CANONICAL_STATUSES, type CanonicalStatus, type RequestKind } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
   const page = Number(searchParams.get("page") ?? "1") || 1;
   const pageSize = Number(searchParams.get("pageSize") ?? "10") || 10;
 
-  const status = REQUEST_STATUSES.includes(statusParam as RequestStatus) ? (statusParam as RequestStatus) : undefined;
+  const status = CANONICAL_STATUSES.includes(statusParam as CanonicalStatus)
+    ? (statusParam as CanonicalStatus)
+    : undefined;
   const kind: RequestKind | "all" =
     kindParam === "letter_booking" || kindParam === "consultation" ? kindParam : "all";
 

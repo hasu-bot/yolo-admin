@@ -211,8 +211,13 @@ export interface UsersQuery {
   pageSize?: number;
 }
 
+export interface UserListItem extends AppUser {
+  requestCount: number;
+  linkedProviders: string[];
+}
+
 export interface UsersResult {
-  items: (AppUser & { requestCount: number })[];
+  items: UserListItem[];
   total: number;
   page: number;
   pageSize: number;
@@ -240,10 +245,12 @@ export async function fetchUsers(query: UsersQuery = {}): Promise<UsersResult> {
   const ids = users.map((u) => u.id);
 
   const requestCounts = new Map<string, number>();
+  const linkedProviders = new Map<string, Set<string>>();
   if (ids.length > 0) {
-    const [bookings, consultations] = await Promise.all([
+    const [bookings, consultations, identities] = await Promise.all([
       supabase.from("letter_bookings").select("user_id").in("user_id", ids),
       supabase.from("consultations").select("yolo_user_id").in("yolo_user_id", ids),
+      supabase.from("user_identities").select("user_id, provider").in("user_id", ids),
     ]);
     for (const row of bookings.data ?? []) {
       const uid = (row as { user_id: string | null }).user_id;
@@ -253,10 +260,20 @@ export async function fetchUsers(query: UsersQuery = {}): Promise<UsersResult> {
       const uid = (row as { yolo_user_id: string | null }).yolo_user_id;
       if (uid) requestCounts.set(uid, (requestCounts.get(uid) ?? 0) + 1);
     }
+    for (const row of identities.data ?? []) {
+      const identity = row as Pick<UserIdentity, "user_id" | "provider">;
+      const providers = linkedProviders.get(identity.user_id) ?? new Set<string>();
+      providers.add(identity.provider);
+      linkedProviders.set(identity.user_id, providers);
+    }
   }
 
   return {
-    items: users.map((u) => ({ ...u, requestCount: requestCounts.get(u.id) ?? 0 })),
+    items: users.map((u) => ({
+      ...u,
+      requestCount: requestCounts.get(u.id) ?? 0,
+      linkedProviders: [...(linkedProviders.get(u.id) ?? [])],
+    })),
     total: count ?? users.length,
     page,
     pageSize,

@@ -5,6 +5,7 @@ import { Pagination } from "@/components/Pagination";
 import { UserLabelBadges } from "@/components/UserLabelBadges";
 import { formatDateTime } from "@/lib/format";
 import { toQuery } from "@/lib/query";
+import { providerLabel } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -77,11 +78,12 @@ export default async function UsersPage({
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900">
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="w-full min-w-[980px] text-sm">
           <thead>
             <tr className="border-b border-black/10 text-left text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400">
               <th className="px-4 py-3 font-medium">名前</th>
               <th className="px-4 py-3 font-medium">ラベル</th>
+              <th className="px-4 py-3 font-medium">連携アカウント</th>
               <th className="px-4 py-3 font-medium">地域</th>
               <th className="px-4 py-3 font-medium">登録日</th>
               <th className="px-4 py-3 font-medium">依頼数</th>
@@ -103,6 +105,9 @@ export default async function UsersPage({
                 <td className="px-4 py-3">
                   <UserLabelBadges labels={user.user_labels} />
                 </td>
+                <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">
+                  {user.linkedProviders.length > 0 ? user.linkedProviders.map(providerLabel).join(" / ") : "-"}
+                </td>
                 <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">{user.region ?? "-"}</td>
                 <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">
                   {formatDateTime(user.registered_at)}
@@ -112,7 +117,7 @@ export default async function UsersPage({
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-neutral-400">
+                <td colSpan={6} className="px-4 py-10 text-center text-neutral-400">
                   該当するユーザーはいません
                 </td>
               </tr>

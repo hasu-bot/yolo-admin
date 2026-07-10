@@ -12,7 +12,9 @@ const ACTIVITY_LABEL: Record<string, string> = {
 };
 
 const PROVIDER_LABEL: Record<string, string> = {
-  line: "LINE",
+  line: "YOLO公式LINE（移行前）",
+  line_yolo: "YOLO公式LINE",
+  line_letter: "Letter.公式LINE",
   discord: "Discord",
   letter: "Letter.",
   consultation: "YOLO相談",

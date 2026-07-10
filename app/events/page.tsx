@@ -9,9 +9,12 @@ export default async function EventsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">イベント</h1>
-      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-        yolo-platform の events テーブル一覧（読み取り専用）。MAGAZINE からの同期処理は別タスクで実装予定です。
-      </p>
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+        <p className="font-medium">イベントの正本はYOLO MAGAZINEです。この画面では削除・編集できません。</p>
+        <p className="mt-1 text-xs">
+          MAGAZINE側で非公開・削除しても、現在の同期はイベントを自動削除せず「非公開」として扱います。platform側のイベントを直接削除した場合は、そのイベントの予約も一緒に削除されます。
+        </p>
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900">
         <table className="w-full min-w-[760px] text-sm">

@@ -72,6 +72,7 @@ export interface DashboardStats {
   cancelledCount: number;
   totalCount: number;
   todayLineSignups: number;
+  discordMemberCount: number;
   recentLinkCodes: DiscordLinkCode[];
   recentLogs: ActivityLog[];
 }
@@ -94,6 +95,9 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const todayLineSignups = (users.data ?? []).filter(
     (u) => Array.isArray(u.user_labels) && u.user_labels.includes("line_registered") && isToday(u.created_at)
   ).length;
+  const discordMemberCount = (users.data ?? []).filter(
+    (u) => Array.isArray(u.user_labels) && u.user_labels.includes("discord_member")
+  ).length;
 
   return {
     newCount: countBy("new"),
@@ -102,6 +106,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     cancelledCount: countBy("cancelled"),
     totalCount: statuses.length,
     todayLineSignups,
+    discordMemberCount,
     recentLinkCodes: (linkCodes.data ?? []) as DiscordLinkCode[],
     recentLogs: (logs.data ?? []) as ActivityLog[],
   };

@@ -2,6 +2,7 @@ import { fetchActivityLogs } from "@/lib/data";
 import { Pagination } from "@/components/Pagination";
 import { formatDateTime } from "@/lib/format";
 import Link from "next/link";
+import { activityDetail, activityLabel, providerLabel } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +45,8 @@ export default async function LogsPage({
           <thead>
             <tr className="border-b border-black/10 text-left text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400">
               <th className="px-4 py-3 font-medium">日時</th>
-              <th className="px-4 py-3 font-medium">種別</th>
-              <th className="px-4 py-3 font-medium">プロバイダ</th>
+              <th className="px-4 py-3 font-medium">何をしたか</th>
+              <th className="px-4 py-3 font-medium">経路</th>
               <th className="px-4 py-3 font-medium">ユーザー</th>
             </tr>
           </thead>
@@ -53,8 +54,11 @@ export default async function LogsPage({
             {items.map((log) => (
               <tr key={log.id}>
                 <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">{formatDateTime(log.occurred_at)}</td>
-                <td className="px-4 py-3 text-neutral-900 dark:text-neutral-100">{log.activity_type}</td>
-                <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">{log.provider ?? "-"}</td>
+                <td className="px-4 py-3 text-neutral-900 dark:text-neutral-100">
+                  {activityLabel(log.activity_type)}
+                  {activityDetail(log) && <p className="mt-0.5 text-xs text-neutral-400">{activityDetail(log)}</p>}
+                </td>
+                <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">{providerLabel(log.provider)}</td>
                 <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">
                   {log.user_id ? (
                     <Link href={`/users/${log.user_id}`} prefetch={false} className="text-indigo-600 hover:underline">

@@ -5,16 +5,9 @@ import { REQUEST_KIND_LABEL, userDisplayName } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UserLabelBadges } from "@/components/UserLabelBadges";
 import { formatDateTime, formatRelative } from "@/lib/format";
+import { activityDetail, activityLabel, providerLabel } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
-
-const PROVIDER_LABEL: Record<string, string> = {
-  line: "LINE",
-  discord: "Discord",
-  letter: "Letter.",
-  consultation: "YOLO相談",
-  event: "イベント",
-};
 
 export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -88,7 +81,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                   <li key={identity.id} className="flex items-center justify-between">
                     <div>
                       <p className="font-medium text-neutral-800 dark:text-neutral-200">
-                        {PROVIDER_LABEL[identity.provider] ?? identity.provider}
+                        {providerLabel(identity.provider)}
                       </p>
                       <p className="text-xs text-neutral-400">
                         {identity.display_name ?? identity.provider_user_id}
@@ -139,11 +132,10 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 {logs.map((log) => (
                   <li key={log.id}>
                     <p className="text-neutral-800 dark:text-neutral-200">
-                      {log.activity_type}
-                      {log.provider && (
-                        <span className="ml-2 text-xs text-neutral-400">via {log.provider}</span>
-                      )}
+                      {activityLabel(log.activity_type)}
+                      <span className="ml-2 text-xs text-neutral-400">{providerLabel(log.provider)}</span>
                     </p>
+                    {activityDetail(log) && <p className="text-xs text-neutral-400">{activityDetail(log)}</p>}
                     <p className="text-xs text-neutral-400">{formatDateTime(log.occurred_at)}</p>
                   </li>
                 ))}

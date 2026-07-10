@@ -3,6 +3,7 @@ import { fetchDashboardStats } from "@/lib/data";
 import { StatTile } from "@/components/StatTile";
 import { StatusDonut } from "@/components/StatusDonut";
 import { formatRelative } from "@/lib/format";
+import { activityLabel, providerLabel } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function DashboardPage() {
         <StatTile label="対応中" value={stats.inProgressCount} unit="件" />
         <StatTile label="完了（累計）" value={stats.completedCount} unit="件" />
         <StatTile label="今日のLINE登録" value={stats.todayLineSignups} unit="人" />
-        <StatTile label="直近Discord連携" value={stats.recentLinkCodes.length} unit="件" hint="直近5件" />
+        <StatTile label="Discordメンバー" value={stats.discordMemberCount} unit="人" hint="連携完了済み" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -42,9 +43,9 @@ export default async function DashboardPage() {
             <ul className="space-y-3">
               {stats.recentLogs.map((log) => (
                 <li key={log.id} className="text-sm">
-                  <p className="text-neutral-800 dark:text-neutral-200">{log.activity_type}</p>
+                  <p className="text-neutral-800 dark:text-neutral-200">{activityLabel(log.activity_type)}</p>
                   <p className="text-xs text-neutral-400">
-                    {log.provider ?? "system"} ・ {formatRelative(log.occurred_at)}
+                    {providerLabel(log.provider)} ・ {formatRelative(log.occurred_at)}
                   </p>
                 </li>
               ))}
@@ -57,7 +58,8 @@ export default async function DashboardPage() {
       </div>
 
       <div className="rounded-xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
-        <h2 className="mb-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">直近のDiscord連携</h2>
+          <h2 className="mb-1 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Discord連携状況</h2>
+          <p className="mb-4 text-xs text-neutral-400">LINE登録済みユーザーがDiscord連携を完了すると、ユーザー管理で「Discordメンバー」として表示されます。</p>
         {stats.recentLinkCodes.length === 0 ? (
           <p className="text-sm text-neutral-400">まだ連携がありません</p>
         ) : (
@@ -65,13 +67,12 @@ export default async function DashboardPage() {
             {stats.recentLinkCodes.map((code) => (
               <li key={code.id} className="flex items-center justify-between py-2 text-sm">
                 <div>
-                  <span className="font-mono text-neutral-700 dark:text-neutral-300">{code.code}</span>
-                  {code.discord_username && (
-                    <span className="ml-2 text-xs text-neutral-500">{code.discord_username}</span>
-                  )}
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                      {code.discord_username ?? "Discordアカウント名を取得中"}
+                    </span>
                 </div>
                 <span className="text-xs text-neutral-400">
-                  {code.used_at ? `連携済み ・ ${formatRelative(code.used_at)}` : `未使用 ・ ${formatRelative(code.created_at)}`}
+                  {code.used_at ? `連携完了 ・ ${formatRelative(code.used_at)}` : `連携コード発行済み（未完了） ・ ${formatRelative(code.created_at)}`}
                 </span>
               </li>
             ))}

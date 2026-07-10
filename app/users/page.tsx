@@ -31,14 +31,14 @@ export default async function UsersPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">ユーザー管理</h1>
-        <form action="/users" className="flex items-center gap-2">
+        <form action="/users" className="flex w-full items-center gap-2 sm:w-auto">
           {label && <input type="hidden" name="label" value={label} />}
           <input
             type="text"
             name="search"
             defaultValue={search ?? ""}
             placeholder="名前・メール・Instagramで検索"
-            className="w-64 rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm dark:border-white/10 dark:bg-neutral-900"
+            className="min-w-0 flex-1 rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm sm:w-64 sm:flex-none dark:border-white/10 dark:bg-neutral-900"
           />
           <button
             type="submit"
@@ -77,7 +77,46 @@ export default async function UsersPage({
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900">
+      {/* モバイル: カード表示 */}
+      <div className="space-y-3 md:hidden">
+        {items.map((user) => (
+          <div
+            key={user.id}
+            className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-neutral-900"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link
+                  href={`/users/${user.id}`}
+                  prefetch={false}
+                  className="font-medium text-neutral-900 dark:text-neutral-100"
+                >
+                  {userDisplayName(user)}
+                </Link>
+                <p className="truncate text-xs text-neutral-400">
+                  {user.email ?? user.instagram ?? user.id.slice(0, 8)}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs text-neutral-500 dark:text-neutral-400">依頼 {user.requestCount}件</span>
+            </div>
+            <div className="mt-2">
+              <UserLabelBadges labels={user.user_labels} />
+            </div>
+            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+              {user.linkedProviders.length > 0 ? user.linkedProviders.map(providerLabel).join(" / ") : "連携なし"}
+              {user.region ? ` ・ ${user.region}` : ""} ・ {formatDateTime(user.registered_at)}
+            </p>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <p className="rounded-xl border border-black/10 bg-white px-4 py-10 text-center text-sm text-neutral-400 dark:border-white/10 dark:bg-neutral-900">
+            該当するユーザーはいません
+          </p>
+        )}
+      </div>
+
+      {/* PC: テーブル表示 */}
+      <div className="hidden overflow-x-auto rounded-xl border border-black/10 bg-white md:block dark:border-white/10 dark:bg-neutral-900">
         <table className="w-full min-w-[980px] text-sm">
           <thead>
             <tr className="border-b border-black/10 text-left text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400">

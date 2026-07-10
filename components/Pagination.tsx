@@ -29,7 +29,7 @@ export function Pagination({
   const end = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex items-center justify-between text-sm text-neutral-500 dark:text-neutral-400">
+    <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-500 dark:text-neutral-400">
       <span>
         全{total}件中 {start}-{end}件を表示
       </span>

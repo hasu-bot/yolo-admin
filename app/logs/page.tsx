@@ -23,13 +23,13 @@ export default async function LogsPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">活動ログ</h1>
-        <form action="/logs" className="flex items-center gap-2">
+        <form action="/logs" className="flex w-full items-center gap-2 sm:w-auto">
           <input
             type="text"
             name="search"
             defaultValue={search ?? ""}
             placeholder="種別・プロバイダで検索"
-            className="w-64 rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm dark:border-white/10 dark:bg-neutral-900"
+            className="min-w-0 flex-1 rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm sm:w-64 sm:flex-none dark:border-white/10 dark:bg-neutral-900"
           />
           <button
             type="submit"
@@ -40,7 +40,37 @@ export default async function LogsPage({
         </form>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900">
+      {/* モバイル: カード表示 */}
+      <div className="space-y-3 md:hidden">
+        {items.map((log) => (
+          <div
+            key={log.id}
+            className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-neutral-900"
+          >
+            <p className="text-sm text-neutral-900 dark:text-neutral-100">{activityLabel(log.activity_type)}</p>
+            {activityDetail(log) && <p className="mt-0.5 text-xs text-neutral-400">{activityDetail(log)}</p>}
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              {providerLabel(log.provider)} ・ {formatDateTime(log.occurred_at)}
+              {log.user_id && (
+                <>
+                  {" ・ "}
+                  <Link href={`/users/${log.user_id}`} prefetch={false} className="text-indigo-600 hover:underline">
+                    ユーザー詳細
+                  </Link>
+                </>
+              )}
+            </p>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <p className="rounded-xl border border-black/10 bg-white px-4 py-10 text-center text-sm text-neutral-400 dark:border-white/10 dark:bg-neutral-900">
+            ログがありません
+          </p>
+        )}
+      </div>
+
+      {/* PC: テーブル表示 */}
+      <div className="hidden overflow-x-auto rounded-xl border border-black/10 bg-white md:block dark:border-white/10 dark:bg-neutral-900">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-black/10 text-left text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400">

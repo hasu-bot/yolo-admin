@@ -27,6 +27,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"

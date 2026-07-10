@@ -114,6 +114,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                     <div className="min-w-0">
                       <Link
                         href={`/requests/${req.id}?kind=${req.kind}`}
+                        prefetch={false}
                         className="truncate font-medium text-neutral-900 hover:text-indigo-600 dark:text-neutral-100 dark:hover:text-indigo-400"
                       >
                         {req.title}

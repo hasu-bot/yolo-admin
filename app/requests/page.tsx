@@ -51,6 +51,7 @@ export default async function RequestsPage({
               href={`/requests?${new URLSearchParams(
                 toQuery({ kind: tab.value !== "all" ? tab.value : undefined, ...statusQuery })
               ).toString()}`}
+              prefetch={false}
               className={`rounded-md px-3 py-1.5 font-medium ${
                 kind === tab.value
                   ? "bg-indigo-600 text-white"
@@ -65,6 +66,7 @@ export default async function RequestsPage({
         <div className="flex flex-wrap gap-1 text-sm">
           <Link
             href={`/requests?${new URLSearchParams(toQuery(kindQuery)).toString()}`}
+            prefetch={false}
             className={`rounded-md px-3 py-1.5 font-medium ${
               !status
                 ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
@@ -77,6 +79,7 @@ export default async function RequestsPage({
             <Link
               key={s}
               href={`/requests?${new URLSearchParams(toQuery({ ...kindQuery, status: s })).toString()}`}
+              prefetch={false}
               className={`rounded-md px-3 py-1.5 font-medium ${
                 status === s
                   ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
@@ -108,6 +111,7 @@ export default async function RequestsPage({
                 <td className="px-4 py-3">
                   <Link
                     href={`/requests/${item.id}?kind=${item.kind}`}
+                    prefetch={false}
                     className="font-medium text-neutral-900 hover:text-indigo-600 dark:text-neutral-100 dark:hover:text-indigo-400"
                   >
                     {item.title}

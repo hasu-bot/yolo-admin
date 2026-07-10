@@ -57,7 +57,7 @@ export default async function LogsPage({
                 <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">{log.provider ?? "-"}</td>
                 <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">
                   {log.user_id ? (
-                    <Link href={`/users/${log.user_id}`} className="text-indigo-600 hover:underline">
+                    <Link href={`/users/${log.user_id}`} prefetch={false} className="text-indigo-600 hover:underline">
                       {log.user_id.slice(0, 8)}…
                     </Link>
                   ) : (

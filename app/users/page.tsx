@@ -51,6 +51,7 @@ export default async function UsersPage({
       <div className="flex flex-wrap gap-1 text-sm">
         <Link
           href={`/users?${new URLSearchParams(toQuery(searchQuery)).toString()}`}
+          prefetch={false}
           className={`rounded-md px-3 py-1.5 font-medium ${
             !label
               ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
@@ -63,6 +64,7 @@ export default async function UsersPage({
           <Link
             key={value}
             href={`/users?${new URLSearchParams(toQuery({ ...searchQuery, label: value })).toString()}`}
+            prefetch={false}
             className={`rounded-md px-3 py-1.5 font-medium ${
               label === value
                 ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
@@ -91,6 +93,7 @@ export default async function UsersPage({
                 <td className="px-4 py-3">
                   <Link
                     href={`/users/${user.id}`}
+                    prefetch={false}
                     className="font-medium text-neutral-900 hover:text-indigo-600 dark:text-neutral-100 dark:hover:text-indigo-400"
                   >
                     {userDisplayName(user)}

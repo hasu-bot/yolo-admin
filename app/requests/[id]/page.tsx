@@ -94,13 +94,14 @@ export default async function RequestDetailPage({
                 <dd className="text-neutral-800 dark:text-neutral-200">
                   {detail.requesterName ?? "-"}
                   {detail.kind === "letter_booking" && detail.row.user_id && (
-                    <Link href={`/users/${detail.row.user_id}`} className="ml-2 text-xs text-indigo-600 hover:underline">
+                    <Link href={`/users/${detail.row.user_id}`} prefetch={false} className="ml-2 text-xs text-indigo-600 hover:underline">
                       詳細
                     </Link>
                   )}
                   {detail.kind === "consultation" && detail.row.yolo_user_id && (
                     <Link
                       href={`/users/${detail.row.yolo_user_id}`}
+                      prefetch={false}
                       className="ml-2 text-xs text-indigo-600 hover:underline"
                     >
                       詳細

@@ -26,7 +26,7 @@ export function StatusDonut({ counts }: { counts: Record<CanonicalStatus, number
   });
 
   return (
-    <div className="flex items-center gap-6">
+    <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
       <div className="relative shrink-0">
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
           <circle

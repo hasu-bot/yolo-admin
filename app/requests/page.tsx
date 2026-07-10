@@ -92,7 +92,39 @@ export default async function RequestsPage({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900">
+      {/* モバイル: カード表示 */}
+      <div className="space-y-3 md:hidden">
+        {items.map((item) => (
+          <div
+            key={`${item.kind}-${item.id}`}
+            className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-neutral-900"
+          >
+            <p className="text-xs text-neutral-400">{REQUEST_KIND_LABEL[item.kind]}</p>
+            <Link
+              href={`/requests/${item.id}?kind=${item.kind}`}
+              prefetch={false}
+              className="mt-1 block font-medium text-neutral-900 dark:text-neutral-100"
+            >
+              {item.title}
+            </Link>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              {item.requesterName ?? "依頼者不明"} ・ {formatDateTime(item.created_at)}
+              {item.followupCount ? ` ・ 追加・変更 ${item.followupCount}件` : ""}
+            </p>
+            <div className="mt-3">
+              <RequestStatusForm id={item.id} kind={item.kind} status={item.status} rawStatus={item.rawStatus} />
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <p className="rounded-xl border border-black/10 bg-white px-4 py-10 text-center text-sm text-neutral-400 dark:border-white/10 dark:bg-neutral-900">
+            該当する依頼はありません
+          </p>
+        )}
+      </div>
+
+      {/* PC: テーブル表示 */}
+      <div className="hidden overflow-x-auto rounded-xl border border-black/10 bg-white md:block dark:border-white/10 dark:bg-neutral-900">
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-black/10 text-left text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400">

@@ -16,7 +16,32 @@ export default async function EventsPage() {
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900">
+      {/* モバイル: カード表示 */}
+      <div className="space-y-3 md:hidden">
+        {events.map((event) => (
+          <div
+            key={event.id}
+            className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-neutral-900"
+          >
+            <p className="font-medium text-neutral-900 dark:text-neutral-100">{event.title}</p>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              {formatDateTime(event.starts_at)}
+              {event.ends_at ? ` 〜 ${formatDateTime(event.ends_at)}` : ""}
+            </p>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              {event.location_name ?? "場所未定"} ・ 定員 {event.capacity ?? "-"} ・ 予約 {event.reservationCount}件
+            </p>
+          </div>
+        ))}
+        {events.length === 0 && (
+          <p className="rounded-xl border border-black/10 bg-white px-4 py-10 text-center text-sm text-neutral-400 dark:border-white/10 dark:bg-neutral-900">
+            イベントはありません
+          </p>
+        )}
+      </div>
+
+      {/* PC: テーブル表示 */}
+      <div className="hidden overflow-x-auto rounded-xl border border-black/10 bg-white md:block dark:border-white/10 dark:bg-neutral-900">
         <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="border-b border-black/10 text-left text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400">

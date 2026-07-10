@@ -65,7 +65,7 @@ export default async function DashboardPage() {
         ) : (
           <ul className="divide-y divide-black/5 dark:divide-white/10">
             {stats.recentLinkCodes.map((code) => (
-              <li key={code.id} className="flex items-center justify-between py-2 text-sm">
+              <li key={code.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2 text-sm">
                 <div>
                     <span className="font-medium text-neutral-700 dark:text-neutral-300">
                       {code.discord_username ?? "Discordアカウント名を取得中"}

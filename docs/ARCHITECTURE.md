@@ -68,17 +68,11 @@ information_schema ダンプを取得し、`supabase/schema.sql` を実スキー
 `lib/types.ts` / `lib/data.ts` / 全ページを実カラム名に全面適合。ステータスは読み取り時に正準化
 （requested/pending→未対応、done→完了 等）、書き込み時に各アプリの語彙へ変換する方式。
 
-### Step 3. yolo-platform（本番）の残作業
-DDL は不要。storage バケット `attachments`（yolo-soudan の添付用）だけ作成する:
-```sql
-insert into storage.buckets (id, name, public)
-values ('attachments', 'attachments', true) on conflict (id) do nothing;
-```
+### Step 3. yolo-platform（本番）の残作業 ✅ 完了（2026-07-09）
+プロジェクトを `yolo-platform` にリネームし、storage バケット `attachments` を作成済み。
 
-### Step 4. otazune → yolo-platform-dev
-1. ダッシュボードでプロジェクト名を `yolo-platform-dev` にリネーム（URL・キーは変わらない）
-2. SQL Editor で `supabase/dev-setup.sql` を実行（旧テーブル破棄＋バケット作成）
-3. 続けて `supabase/schema.sql` を全文実行（フルスキーマ構築）
+### Step 4. otazune → yolo-platform-dev ✅ 完了（2026-07-09）
+`yolo-platform-dev` にリネームし、`dev-setup.sql` → `schema.sql` でフルスキーマ構築済み。
 
 ### Step 5. 接続の切り替え
 | アプリ | 変更 |
@@ -98,14 +92,29 @@ values ('attachments', 'attachments', true) on conflict (id) do nothing;
 - **01-ECOSYSTEM-IA §5（作りすぎない）**: サービス層の統合はしない。共通ログインも作らない。統合は外部接点レイヤーのみ。
 - **相談データの正本**: 01-IA の「相談＝相談サイト(Supabase)」は維持されるが、その実体が otazune から yolo-platform に移る。01-IA §5 の表の更新を推奨。
 
-## 5. 未決事項
+## 5. 構築完了の記録（2026-07-09）
+
+ランブック Step 1〜5 をすべて実施し、環境構築は完了した。
+
+- yolo-platform（本番）: リネーム済み・`attachments` バケット作成済み・全テーブル稼働
+- yolo-platform-dev: リネーム済み・フルスキーマ構築済み
+- yolo-soudan: Railway の接続先を yolo-platform に切り替え済み。フォーム送信の動作確認済み
+  （切替時、`SUPABASE_URL` に `/rest/v1` 付きURLを貼ると「Invalid path specified in request URL」に
+  なる点に注意。値はドメインのみ: `https://<ref>.supabase.co`）
+- Letter. / LINE Worker: 変更なし（元から yolo-platform を向いている）
+
+残タスク:
+- yolo-admin の Vercel デプロイ（環境変数3つの設定）
+- ブランチ `claude/yolo-admin-nextjs-2yr59e` の main へのマージ
+
+## 6. 未決事項
 
 | # | 論点 | 期限 |
 |---|---|---|
 | 1 | イベント正本の食い違い（01-IA「MEMBERSが正」vs Notion 7/8「MAGAZINE記事が正・Supabaseは配信用」） | イベント同期実装前 |
 | 2 | `chats` / `messages` を yolo-admin の依頼詳細に表示するか | v2以降 |
-| 3 | otazune 内のテストデータ破棄の最終確認（本文書は破棄前提） | Step 4 実行前 |
+| 3 | lumina 本番の接続先確認（yolo-platform に models/reservations が同居している件） | lumina 次回作業時 |
 
 ---
 
-*確定版: 2026-07-09 ／ Step 1 のスキーマ取得結果を受けて Step 2 以降を実行する*
+*確定版: 2026-07-09 ／ 環境構築完了。以降のスキーマ変更は supabase/migrations/ 経由で行うこと*

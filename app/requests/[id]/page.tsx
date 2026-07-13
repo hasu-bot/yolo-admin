@@ -9,6 +9,7 @@ import {
   type RequestKind,
 } from "@/lib/types";
 import { formatDateTime } from "@/lib/format";
+import { htmlToPlainText } from "@/lib/text";
 import { RequestStatusForm } from "../RequestStatusForm";
 
 export const dynamic = "force-dynamic";
@@ -16,32 +17,85 @@ export const dynamic = "force-dynamic";
 /** booking_data のうち、専用UIで扱うキー（一覧化から除外する） */
 const HANDLED_BOOKING_KEYS = new Set(["followups", "admin_memo"]);
 
+/** 表示順も兼ねる。ここに無いキーはこの後ろに続く */
 const BOOKING_KEY_LABEL: Record<string, string> = {
   title: "タイトル",
   subject: "件名",
-  shoot_content: "撮影内容",
-  summary: "概要",
   request: "依頼内容",
   content: "内容",
+  shoot_content: "撮影内容",
+  summary: "概要",
   desired_dates: "希望日候補",
   desired_datetime: "希望日時",
+  schedule: "希望時期",
   location: "場所",
   budget: "予算",
+  people: "人数",
+  purpose: "用途",
   name: "お名前",
   contact: "連絡先",
   notes: "その他要望",
+  message: "メッセージ",
+  answers: "回答内容",
 };
 
-function formatValue(value: unknown): string {
+/** 運営が普段見る必要のない技術的なキーは折りたたみに逃がす */
+const TECHNICAL_KEY_PATTERN = /(^|_)(id|ids|token|uid|hash|signature|raw|payload)$|^(source|line_user|discord_user)/i;
+
+function isEmptyValue(value: unknown): boolean {
+  if (value === null || value === undefined || value === "") return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  if (typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length === 0) return true;
+  return false;
+}
+
+function toDisplayText(value: unknown): string {
   if (value === null || value === undefined || value === "") return "-";
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map((v) => formatValue(v)).join(" / ");
-  if (typeof value === "object") return JSON.stringify(value, null, 1);
+  if (typeof value === "string") return htmlToPlainText(value);
+  if (typeof value === "boolean") return value ? "はい" : "いいえ";
+  if (Array.isArray(value)) return value.map((v) => toDisplayText(v)).join("\n");
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => !isEmptyValue(v))
+      .map(([k, v]) => `${BOOKING_KEY_LABEL[k] ?? k}: ${toDisplayText(v)}`)
+      .join("\n");
+  }
   return String(value);
 }
 
+/** メール・URLはタップできるように */
+function ContactText({ value }: { value: string }) {
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    return (
+      <a href={`mailto:${value}`} className="text-indigo-600 hover:underline">
+        {value}
+      </a>
+    );
+  }
+  if (/^https?:\/\//.test(value)) {
+    return (
+      <a href={value} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">
+        {value}
+      </a>
+    );
+  }
+  return <>{value}</>;
+}
+
+function sortBookingEntries(entries: [string, unknown][]): [string, unknown][] {
+  const order = Object.keys(BOOKING_KEY_LABEL);
+  return [...entries].sort(([a], [b]) => {
+    const ia = order.indexOf(a);
+    const ib = order.indexOf(b);
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
 function followupText(entry: FollowupEntry): string {
-  return entry.message ?? entry.text ?? "";
+  return htmlToPlainText(entry.message ?? entry.text ?? "");
 }
 
 function followupAt(entry: FollowupEntry): string | undefined {
@@ -63,16 +117,22 @@ export default async function RequestDetailPage({
   if (!detail) notFound();
 
   const isBooking = detail.kind === "letter_booking";
-  const title = isBooking ? bookingTitle(detail.row) : detail.row.title;
+  const title = isBooking ? htmlToPlainText(bookingTitle(detail.row)) : detail.row.title;
   const status = normalizeStatus(detail.row.status);
   const adminMemo = isBooking ? (detail.row.booking_data?.admin_memo ?? null) : detail.row.admin_memo;
 
   const followups: FollowupEntry[] = isBooking ? (detail.row.booking_data?.followups ?? []) : [];
   const sortedFollowups = [...followups].sort((a, b) => ((followupAt(a) ?? "") < (followupAt(b) ?? "") ? 1 : -1));
 
-  const bookingEntries = isBooking
-    ? Object.entries(detail.row.booking_data ?? {}).filter(([key]) => !HANDLED_BOOKING_KEYS.has(key))
+  const allEntries = isBooking
+    ? Object.entries(detail.row.booking_data ?? {}).filter(
+        ([key, value]) => !HANDLED_BOOKING_KEYS.has(key) && !isEmptyValue(value)
+      )
     : [];
+  const mainEntries = sortBookingEntries(allEntries.filter(([key]) => !TECHNICAL_KEY_PATTERN.test(key)));
+  const technicalEntries = allEntries.filter(([key]) => TECHNICAL_KEY_PATTERN.test(key));
+
+  const detailUserId = detail.kind === "letter_booking" ? detail.row.user_id : detail.row.yolo_user_id;
 
   return (
     <div className="space-y-4">
@@ -93,14 +153,9 @@ export default async function RequestDetailPage({
                 <dt className="text-neutral-400">依頼者</dt>
                 <dd className="text-neutral-800 dark:text-neutral-200">
                   {detail.requesterName ?? "-"}
-                  {detail.kind === "letter_booking" && detail.row.user_id && (
-                    <Link href={`/users/${detail.row.user_id}`} prefetch={false} className="ml-2 text-xs text-indigo-600 hover:underline">
-                      詳細
-                    </Link>
-                  )}
-                  {detail.kind === "consultation" && detail.row.yolo_user_id && (
+                  {detailUserId && (
                     <Link
-                      href={`/users/${detail.row.yolo_user_id}`}
+                      href={`/users/${detailUserId}`}
                       prefetch={false}
                       className="ml-2 text-xs text-indigo-600 hover:underline"
                     >
@@ -123,7 +178,9 @@ export default async function RequestDetailPage({
               <div className="mt-4 space-y-3 text-sm">
                 <div>
                   <p className="text-neutral-400">相談内容</p>
-                  <p className="whitespace-pre-wrap text-neutral-800 dark:text-neutral-200">{detail.row.detail}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed text-neutral-800 dark:text-neutral-200">
+                    {htmlToPlainText(detail.row.detail)}
+                  </p>
                 </div>
                 <dl className="grid grid-cols-2 gap-y-3 sm:grid-cols-3">
                   <div>
@@ -145,7 +202,13 @@ export default async function RequestDetailPage({
                   <div>
                     <dt className="text-neutral-400">連絡先</dt>
                     <dd className="text-neutral-800 dark:text-neutral-200">
-                      {detail.row.is_anonymous ? "（匿名）" : (detail.row.contact ?? "-")}
+                      {detail.row.is_anonymous ? (
+                        "（匿名）"
+                      ) : detail.row.contact ? (
+                        <ContactText value={detail.row.contact} />
+                      ) : (
+                        "-"
+                      )}
                     </dd>
                   </div>
                 </dl>
@@ -166,19 +229,42 @@ export default async function RequestDetailPage({
               </div>
             ) : (
               <div className="mt-4 space-y-3 text-sm">
-                {bookingEntries.length === 0 ? (
+                {mainEntries.length === 0 && technicalEntries.length === 0 ? (
                   <p className="text-neutral-400">依頼内容の詳細データがありません</p>
                 ) : (
-                  <dl className="space-y-3">
-                    {bookingEntries.map(([key, value]) => (
-                      <div key={key}>
-                        <dt className="text-neutral-400">{BOOKING_KEY_LABEL[key] ?? key}</dt>
-                        <dd className="whitespace-pre-wrap text-neutral-800 dark:text-neutral-200">
-                          {formatValue(value)}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
+                  <>
+                    <dl className="space-y-3">
+                      {mainEntries.map(([key, value]) => (
+                        <div key={key}>
+                          <dt className="text-neutral-400">{BOOKING_KEY_LABEL[key] ?? key}</dt>
+                          <dd className="whitespace-pre-wrap leading-relaxed text-neutral-800 dark:text-neutral-200">
+                            {key === "contact" && typeof value === "string" ? (
+                              <ContactText value={value} />
+                            ) : (
+                              toDisplayText(value)
+                            )}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {technicalEntries.length > 0 && (
+                      <details className="rounded-lg border border-black/10 px-3 py-2 dark:border-white/10">
+                        <summary className="cursor-pointer text-xs text-neutral-400">
+                          技術情報（{technicalEntries.length}件）
+                        </summary>
+                        <dl className="mt-2 space-y-2">
+                          {technicalEntries.map(([key, value]) => (
+                            <div key={key}>
+                              <dt className="text-xs text-neutral-400">{key}</dt>
+                              <dd className="break-all font-mono text-xs text-neutral-600 dark:text-neutral-400">
+                                {toDisplayText(value)}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </details>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -207,8 +293,16 @@ export default async function RequestDetailPage({
                 <li key={index} className="relative text-sm">
                   <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-indigo-500" />
                   <p className="text-xs text-neutral-400">{formatDateTime(followupAt(entry))}</p>
-                  <p className="text-neutral-800 dark:text-neutral-200">
-                    {entry.kind === "add" ? "追加: " : "変更: "}
+                  <p className="whitespace-pre-wrap text-neutral-800 dark:text-neutral-200">
+                    <span
+                      className={`mr-1.5 inline-block rounded px-1.5 py-0.5 text-xs font-medium ${
+                        entry.kind === "add"
+                          ? "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300"
+                          : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                      }`}
+                    >
+                      {entry.kind === "add" ? "追加" : "変更"}
+                    </span>
                     {followupText(entry)}
                   </p>
                 </li>

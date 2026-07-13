@@ -15,11 +15,17 @@ export default async function DashboardPage() {
       <h1 className="text-xl font-semibold">ダッシュボード</h1>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatTile label="未対応" value={stats.newCount} unit="件" />
-        <StatTile label="対応中" value={stats.inProgressCount} unit="件" />
-        <StatTile label="完了（累計）" value={stats.completedCount} unit="件" />
-        <StatTile label="今日のLINE登録" value={stats.todayLineSignups} unit="人" />
-        <StatTile label="Discordメンバー" value={stats.discordMemberCount} unit="人" hint="連携完了済み" />
+        <StatTile label="未対応" value={stats.newCount} unit="件" href="/requests?status=new" />
+        <StatTile label="対応中" value={stats.inProgressCount} unit="件" href="/requests?status=in_progress" />
+        <StatTile label="完了（累計）" value={stats.completedCount} unit="件" href="/requests?status=completed" />
+        <StatTile label="今日のLINE登録" value={stats.todayLineSignups} unit="人" href="/users?label=line_registered" />
+        <StatTile
+          label="Discordメンバー"
+          value={stats.discordMemberCount}
+          unit="人"
+          hint="連携完了済み"
+          href="/users?label=discord_member"
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

@@ -1,6 +1,8 @@
 // yolo-platform Supabase の実スキーマ（2026-07-09 ダンプ確認済み）に基づく型定義。
 // スキーマの正本は supabase/schema.sql。
 
+import { htmlToPlainText } from "./text";
+
 /**
  * 管理画面上の正準ステータス（表示・フィルタ用）。
  * DB上の実値はアプリごとに語彙が異なるため、normalizeStatus() で正準化し、
@@ -183,7 +185,13 @@ export function bookingTitle(booking: Pick<LetterBooking, "booking_data" | "sour
   for (const key of ["title", "subject", "shoot_content", "summary", "request", "content"]) {
     const value = data[key];
     if (typeof value === "string" && value.trim()) {
-      return value.trim().length > 60 ? `${value.trim().slice(0, 60)}…` : value.trim();
+      // 本文全文が入っているキーもあるため、最初の1文（または1行）だけをタイトルにする
+      const plain = htmlToPlainText(value).trim();
+      const firstLine = plain.split("\n")[0]?.trim() ?? "";
+      const firstSentence = firstLine.split("。")[0]?.trim() ?? "";
+      const text = (firstSentence || firstLine).replace(/\s+/g, " ");
+      if (!text) continue;
+      return text.length > 40 ? `${text.slice(0, 40)}…` : text;
     }
   }
   return `撮影依頼 ${booking.source_submission_id ?? booking.id.slice(0, 8)}`;
